@@ -1,0 +1,75 @@
+//@version=5
+strategy("template=yon",
+     overlay=true,
+     initial_capital=10000,
+     process_orders_on_close=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     commission_type=strategy.commission.percent,
+     commission_value=0.91)
+
+// copy atau tulis semua logic/ rumus/ kalkulasi
+// contoh di bawah ini kita akan melakukan backtest goldencross untuk 2 garis Moving Average (MA)
+
+// ===== Inputs =====
+src        = input.source(close, "Source harga")
+fastLen    = input.int(50,  "MA fast", minval=1)
+slowLen    = input.int(200, "MA slow", minval=1)
+
+enableLongs  = input.bool(true,  "Test Longs?")
+enableShorts = input.bool(false, "Test Shorts?")
+
+// Persentase dalam % (contoh 1 = 1%)
+longSLpct   = input.float(99.0, "Long SL (%)",   minval=0.0, step=0.1)
+longTPpct   = input.float(99.0, "Long TP (%)",   minval=0.0, step=0.1)
+shortTPpct  = input.float(99.0, "Short TP (%)",  minval=0.0, step=0.1)
+shortSLpct  = input.float(99.0, "Short SL (%)",  minval=0.0, step=0.1)
+
+// Rentang waktu backtest
+fromDay   = input.int(1,  "From Day",   minval=1,  maxval=31)
+fromMonth = input.int(1,  "From Month", minval=1,  maxval=12)
+fromYear  = input.int(2005,"From Year", minval=1930)
+toDay     = input.int(1,  "To Day",     minval=1,  maxval=31)
+toMonth   = input.int(1,  "To Month",   minval=1,  maxval=12)
+toYear    = input.int(2100,"To Year",   minval=1930)
+
+startDate  = timestamp(fromYear, fromMonth, fromDay, 0, 0)
+finishDate = timestamp(toYear,  toMonth,   toDay,   23, 59)
+inRange    = time >= startDate and time <= finishDate
+
+// ===== Indicators =====
+maFast = ta.sma(src, fastLen)
+maSlow = ta.sma(src, slowLen)
+
+buySignal  = ta.crossover(maFast, maSlow)   // Golden cross
+sellSignal = ta.crossunder(maFast, maSlow)  // Death cross
+
+plot(maSlow, "MA slow", color=color.red,  linewidth=1)
+plot(maFast, "MA fast", color=color.blue, linewidth=1)
+
+// ===== Entries =====
+if inRange
+    if enableLongs and buySignal
+        strategy.entry("LONG", strategy.long, alert_message="silakan beli")
+    if enableLongs and sellSignal
+        strategy.close("LONG",  alert_message="silakan close posisi long")
+
+    if enableShorts and sellSignal
+        strategy.entry("SHORT", strategy.short, alert_message="silakan short")
+    if enableShorts and buySignal
+        strategy.close("SHORT", alert_message="silakan close posisi short")
+
+// ===== Exits (TP/SL) =====
+// Hitung level TP/SL hanya saat ada posisi
+if strategy.position_size != 0
+    avg = strategy.position_avg_price
+    // Long
+    longStop  = avg * (1.0 - longSLpct/100.0)
+    longLimit = avg * (1.0 + longTPpct/100.0)
+    // Short
+    shortStop  = avg * (1.0 + shortSLpct/100.0)
+    shortLimit = avg * (1.0 - shortTPpct/100.0)
+
+    // Pasang exit untuk masing-masing sisi. 'when' memastikan hanya aktif untuk sisi yang tepat.
+    strategy.exit("XL TP/SL", from_entry="LONG",  stop=longStop,  limit=longLimit,  when=strategy.position_size > 0)
+    strategy.exit("XS TP/SL", from_entry="SHORT", stop=shortStop, limit=shortLimit, when=strategy.position_size < 0)
