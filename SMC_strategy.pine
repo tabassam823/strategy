@@ -905,8 +905,12 @@ shortSignalRaw                  = (shortSwingBOSInput and currentAlerts.swingBea
                                   (shortFairValueGapInput and currentAlerts.bearishFairValueGap) or
                                   (shortEqualHighsInput and currentAlerts.equalHighs)
 
-longSignal                      = enableLongs  and inRange and longSignalRaw
-shortSignal                     = enableShorts and inRange and shortSignalRaw
+htfSMA                         = request.security(syminfo.tickerid, "D", ta.sma(close, 200), lookahead = barmerge.lookahead_on)
+bullRegime                     = close > htfSMA
+bearRegime                     = close < htfSMA
+
+longSignal                     = enableLongs  and inRange and longSignalRaw  and bullRegime
+shortSignal                    = enableShorts and inRange and shortSignalRaw and bearRegime
 
 if not inRange and exitOnOppositeSignals
     if strategy.position_size > 0
