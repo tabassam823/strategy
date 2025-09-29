@@ -920,13 +920,13 @@ if not inRange and exitOnOppositeSignals
 
 if inRange
     if longSignal
-        if exitOnOppositeSignals and strategy.position_size < 0
-            strategy.close('SHORT', comment = 'Opposite long signal', alert_message = 'SMC close short - opposite signal')
-        strategy.entry('LONG', strategy.long, alert_message = 'SMC long entry')
-    if shortSignal
         if exitOnOppositeSignals and strategy.position_size > 0
             strategy.close('LONG', comment = 'Opposite short signal', alert_message = 'SMC close long - opposite signal')
         strategy.entry('SHORT', strategy.short, alert_message = 'SMC short entry')
+    if shortSignal
+        if exitOnOppositeSignals and strategy.position_size < 0
+            strategy.close('SHORT', comment = 'Opposite long signal', alert_message = 'SMC close short - opposite signal')
+        strategy.entry('LONG', strategy.long, alert_message = 'SMC long entry')
 
 if strategy.position_size != 0
     avgPrice                   = strategy.position_avg_price
