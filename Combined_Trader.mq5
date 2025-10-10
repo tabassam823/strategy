@@ -38,8 +38,9 @@ double            iBands_Basebuf[];  //  dynamic array for storing BB indicator 
 double            iBands_Upperbuf[]; //  dynamic array for storing BB indicator values
 double            iBands_Lowerbuf[]; //  dynamic array for storing BB indicator values
 
-int               cciHandle;
-double            ExtCCIBuffer[];
+int               fractal_cci_handle; // variable for storing the Fractal CCI indicator handle
+double            fractal_buy_buffer[]; // dynamic array for storing fractal buy signals
+double            fractal_sell_buffer[]; // dynamic array for storing fractal sell signals
 
 double            inputs[14];        // array for storing inputs(This are waights of out Nuero Inputs)
 double            weight[14];        // array for storing weights
@@ -82,11 +83,11 @@ int OnInit()
 //--- add the BB indicator to the price chart
    ChartIndicatorAdd(ChartID(),0,iBands_handle);
 
-//--- CCI Handle
-   cciHandle = iCCI(_Symbol, _Period, CCI_Period, PRICE_WEIGHTED);
-   if (cciHandle == INVALID_HANDLE)
+//--- Fractal CCI Handle
+   fractal_cci_handle = iCustom(_Symbol, _Period, "Fractal_CCI", CCI_Period, CCI_Threshold);
+   if (fractal_cci_handle == INVALID_HANDLE)
    {
-      Print("Error CCI Handle Create");
+      Print("Error Fractal CCI Handle Create");
       return(INIT_FAILED);
    }
 
@@ -96,7 +97,10 @@ int OnInit()
    ArraySetAsSeries(iBands_Upperbuf,true);
 //--- set the iBands lower array indexing as time series
    ArraySetAsSeries(iBands_Lowerbuf,true);
-   ArraySetAsSeries(ExtCCIBuffer,true);
+//--- set the fractal_buy_buffer array indexing as time series
+   ArraySetAsSeries(fractal_buy_buffer,true);
+//--- set the fractal_sell_buffer array indexing as time series
+   ArraySetAsSeries(fractal_sell_buffer,true);
 
 //--- place weights into the array
    weight[0]=w0;
@@ -132,13 +136,17 @@ void OnDeinit(const int reason)
   {
 //--- delete the indicator handle and deallocate the memory space it occupies
    IndicatorRelease(iBands_handle);
-   IndicatorRelease(cciHandle);
+   IndicatorRelease(fractal_cci_handle);
 //--- free the iBands Base dynamic array of data
    ArrayFree(iBands_Basebuf);
 //--- free the iBand lower dynamic array of data
    ArrayFree(iBands_Lowerbuf);
 //--- free the iBands upper dynamic array of data
    ArrayFree(iBands_Upperbuf);
+//--- free the fractal buy dynamic array
+   ArrayFree(fractal_buy_buffer);
+//--- free the fractal sell dynamic array
+   ArrayFree(fractal_sell_buffer);
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
@@ -214,10 +222,16 @@ void OnTick()
       ResetLastError();
       return;
      }
-//--- Copy CCI values
-   if (CopyBuffer(cciHandle, 0, 0, 10, ExtCCIBuffer) <= 0)
+
+//--- Copy Fractal CCI values
+   if (CopyBuffer(fractal_cci_handle, 1, 0, 10, fractal_buy_buffer) <= 0) // Buffer 1 for buy signals
    {
-      Print("Error CCI copy values");
+      Print("Error copying fractal buy buffer values");
+      return;
+   }
+   if (CopyBuffer(fractal_cci_handle, 0, 0, 10, fractal_sell_buffer) <= 0) // Buffer 0 for sell signals
+   {
+      Print("Error copying fractal sell buffer values");
       return;
    }
 
@@ -260,22 +274,19 @@ void OnTick()
    bool fractal_buy_signal = false;
    bool fractal_sell_signal = false;
 
-   // Loop backwards from the 3rd bar (most recent possible fractal) up to the 7th bar.
-   for(int i = 3; i < 8; i++)
+   // Loop backwards from bar #2 to check for the most recent signal.
+   // A fractal is confirmed on the bar two periods after the peak/trough,
+   // so we check from bar 2 backwards to avoid acting on a repainting signal.
+   for(int i = 2; i < 8; i++)
    {
-       // Check for Upper Fractal
-       if(mrate[i].high > mrate[i-1].high && mrate[i].high > mrate[i-2].high &&
-          mrate[i].high >= mrate[i+1].high && mrate[i].high >= mrate[i+2].high &&
-          ExtCCIBuffer[i] > CCI_Threshold)
+       // Check for a buy signal (lower fractal)
+       if (fractal_buy_buffer[i] != EMPTY_VALUE)
        {
            fractal_buy_signal = true;
            break; // Found the most recent signal, exit loop
        }
-
-       // Check for Lower Fractal
-       if(mrate[i].low < mrate[i-1].low && mrate[i].low < mrate[i-2].low &&
-          mrate[i].low <= mrate[i+1].low && mrate[i].low <= mrate[i+2].low &&
-          ExtCCIBuffer[i] < -CCI_Threshold)
+       // Check for a sell signal (upper fractal)
+       if (fractal_sell_buffer[i] != EMPTY_VALUE)
        {
            fractal_sell_signal = true;
            break; // Found the most recent signal, exit loop
