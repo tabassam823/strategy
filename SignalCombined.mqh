@@ -6,10 +6,10 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 
-#include <Expert\Signal\Signal.mqh>
+#include <Expert\ExpertSignal.mqh>
 #include <Indicators\Indicators.mqh>
 
-class CSignalCombined : public CSignal
+class CSignalCombined : public CExpertSignal
 {
 private:
     //--- Neuro Trader members
@@ -50,6 +50,8 @@ public:
 
 CSignalCombined::CSignalCombined(void) : m_cci_period(7), m_cci_threshold(110)
 {
+    //--- initialize neuro inputs
+    ArrayInitialize(m_neuro_inputs, 0);
 }
 
 CSignalCombined::~CSignalCombined(void)
@@ -60,26 +62,35 @@ bool CSignalCombined::ValidationSettings(void)
 {
     if (m_cci_period <= 0 || m_cci_threshold <= 0)
         return (false);
-    return (true);
+    return (CExpertSignal::ValidationSettings());
 }
 
 bool CSignalCombined::InitIndicators(CIndicators *indicators)
 {
     if (indicators == NULL)
         return (false);
-    if (!m_neuro_bb.Create(_Symbol, _Period, IND_BB, 20, 0, 2.0, PRICE_CLOSE))
+    if (!CExpertSignal::InitIndicators(indicators))
         return (false);
+
+    //--- Create Bollinger Bands indicator
+    MqlParam bb_params[4];
+    bb_params[0].type = TYPE_INT;    bb_params[0].integer_value = 20;        // period
+    bb_params[1].type = TYPE_INT;    bb_params[1].integer_value = 0;         // shift
+    bb_params[2].type = TYPE_DOUBLE; bb_params[2].double_value = 2.0;      // deviation
+    bb_params[3].type = TYPE_INT;    bb_params[3].integer_value = PRICE_CLOSE; // price
+    if (!m_neuro_bb.Create(_Symbol, _Period, IND_BB, 4, bb_params))
+        return(false);
     if (!indicators->Add(&m_neuro_bb))
         return (false);
 
-    MqlParam params[2];
-    params[0].type = TYPE_INT;
-    params[0].integer_value = m_cci_period;
-    params[1].type = TYPE_INT;
-    params[1].integer_value = m_cci_threshold;
-
-    if (!m_fractal_cci.Create(_Symbol, _Period, IND_CUSTOM, "Fractal_CCI", 2, params))
-        return (false);
+    //--- Create Fractal CCI custom indicator
+    int handle = iCustom(_Symbol, _Period, "Fractal_CCI", m_cci_period, m_cci_threshold);
+    if (handle == INVALID_HANDLE)
+    {
+        printf("Error creating Fractal_CCI indicator handle");
+        return(false);
+    }
+    m_fractal_cci.SetIndicatorHandle(handle);
     if (!indicators->Add(&m_fractal_cci))
         return (false);
 
@@ -106,7 +117,8 @@ int CSignalCombined::LongCondition(void)
 
     for (int i = 0; i < 7; i++)
     {
-        m_neuro_inputs[i * 2] = (((((upper_bb[i] - lower_bb[i]) / base_bb[i]) - (x_min + x_minn) * (d2 - d1)) / ((x_maxx + x_max) - (x_min + x_minn))) + d1;
+        if(base_bb[i] != 0 && (x_maxx + x_max) - (x_min + x_minn) != 0)
+            m_neuro_inputs[i * 2] = (((((upper_bb[i] - lower_bb[i]) / base_bb[i]) - (x_min + x_minn) * (d2 - d1)) / ((x_maxx + x_max) - (x_min + x_minn))) + d1);
     }
 
     double neuro_out = CalculateNeuron(m_neuro_inputs, m_neuro_weights);
@@ -149,7 +161,8 @@ int CSignalCombined::ShortCondition(void)
 
     for (int i = 0; i < 7; i++)
     {
-        m_neuro_inputs[i * 2] = (((((upper_bb[i] - lower_bb[i]) / base_bb[i]) - (x_min + x_minn) * (d2 - d1)) / ((x_maxx + x_max) - (x_min + x_minn))) + d1;
+        if(base_bb[i] != 0 && (x_maxx + x_max) - (x_min + x_minn) != 0)
+            m_neuro_inputs[i * 2] = (((((upper_bb[i] - lower_bb[i]) / base_bb[i]) - (x_min + x_minn) * (d2 - d1)) / ((x_maxx + x_max) - (x_min + x_minn))) + d1);
     }
 
     double neuro_out = CalculateNeuron(m_neuro_inputs, m_neuro_weights);
@@ -185,6 +198,9 @@ double CSignalCombined::CalculateNeuron(double &x[], double &w[])
 
 double CSignalCombined::ActivateNeuron(double x)
 {
+    // Hyperbolic tangent function, with check for large x to prevent overflow
+    if (x > 100) return 1.0;
+    if (x < -100) return -1.0;
     return ((exp(x) - exp(-x)) / (exp(x) + exp(-x)));
 }
 //+------------------------------------------------------------------+
