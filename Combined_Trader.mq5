@@ -175,7 +175,7 @@ void OnTick()
       if(Old_Time!=New_Time[0]) // if old time isn't equal to new bar time
         {
          IsNewBar=true;   // if it isn't a first call, the new bar has appeared
-         if(MQL5InfoInteger(MQL5_DEBUGGING)) Print("We have new bar here ",New_Time[0]," old time was ",Old_Time);
+         if(MQLInfoInteger(MQL_DEBUG)) Print("We have new bar here ",New_Time[0]," old time was ",Old_Time);
          Old_Time=New_Time[0];            // saving bar time
         }
      }
@@ -334,7 +334,12 @@ void OnTick()
          mrequest.type_filling = ORDER_FILLING_RETURN;                             // Order execution type
          mrequest.deviation=100;                                                // Deviation from current price
          //--- send order
-         OrderSend(mrequest,mresult);
+         if(!OrderSend(mrequest,mresult))
+           {
+            Alert("The Buy order request could not be completed -error:",GetLastError());
+            ResetLastError();
+            return;
+           }
          // get the result code
          if(mresult.retcode==10009 || mresult.retcode==10008) //Request is completed or order placed
            {
@@ -342,7 +347,7 @@ void OnTick()
            }
          else
            {
-            Alert("The Buy order request could not be completed -error:",GetLastError());
+            Alert("The Buy order request could not be completed -error:",GetLastError(), " retcode:", mresult.retcode);
             ResetLastError();
             return;
            }
@@ -373,7 +378,12 @@ void OnTick()
          mrequest.type_filling = ORDER_FILLING_RETURN;                          // Order execution type
          mrequest.deviation=100;                                             // Deviation from current price
          //--- send order
-         OrderSend(mrequest,mresult);
+         if(!OrderSend(mrequest,mresult))
+           {
+            Alert("The Sell order request could not be completed -error:",GetLastError());
+            ResetLastError();
+            return;
+           }
          // get the result code
          if(mresult.retcode==10009 || mresult.retcode==10008) //Request is completed or order placed
            {
@@ -381,7 +391,7 @@ void OnTick()
            }
          else
            {
-            Alert("The Sell order request could not be completed -error:",GetLastError());
+            Alert("The Sell order request could not be completed -error:",GetLastError(), " retcode:", mresult.retcode);
             ResetLastError();
             return;
            }
