@@ -7,7 +7,7 @@
 #property link      "https://www.mql5.com"
 
 #include <Expert\Signal\ExpertSignal.mqh>
-#include <Indicators\Oscillators.mqh>
+#include <Indicators\Oscilators.mqh>
 
 //+------------------------------------------------------------------+
 //| CSinalFractalNeuro class                                         |
