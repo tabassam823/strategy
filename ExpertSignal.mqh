@@ -1,3 +1,5 @@
+#ifndef ExpertSignal_mqh
+#define ExpertSignal_mqh
 //+------------------------------------------------------------------+
 //|                                                 ExpertSignal.mqh |
 //|                             Copyright 2000-2025, MetaQuotes Ltd. |
@@ -462,3 +464,4 @@ double CExpertSignal::Direction(void)
    return(result);
   }
 //+------------------------------------------------------------------+
+#endif

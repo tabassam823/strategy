@@ -1,3 +1,5 @@
+#ifndef ExpertBase_mqh
+#define ExpertBase_mqh
 //+------------------------------------------------------------------+
 //|                                                   ExpertBase.mqh |
 //|                             Copyright 2000-2025, MetaQuotes Ltd. |
@@ -324,7 +326,7 @@ bool CExpertBase::SetPriceSeries(CiOpen *open,CiHigh *high,CiLow *low,CiClose *c
 //--- check pointers
    if((IS_OPEN_SERIES_USAGE  && open==NULL) ||
       (IS_HIGH_SERIES_USAGE  && high==NULL) ||
-      (IS_LOW_SERIES_USAGE   && low==NULL)  || 
+      (IS_LOW_SERIES_USAGE   && low==NULL)  ||
       (IS_CLOSE_SERIES_USAGE && close==NULL))
      {
       Print(__FUNCTION__+": NULL pointer");
@@ -349,8 +351,8 @@ bool CExpertBase::SetOtherSeries(CiSpread *spread,CiTime *time,CiTickVolume *tic
       return(false);
      }
 //--- check pointers
-   if((IS_SPREAD_SERIES_USAGE && spread==NULL) || 
-      (IS_TIME_SERIES_USAGE && time==NULL) || 
+   if((IS_SPREAD_SERIES_USAGE && spread==NULL) ||
+      (IS_TIME_SERIES_USAGE && time==NULL) ||
       (IS_TICK_VOLUME_SERIES_USAGE && tick_volume==NULL) ||
       (IS_REAL_VOLUME_SERIES_USAGE && real_volume==NULL))
      {
@@ -713,3 +715,4 @@ bool CExpertBase::InitRealVolume(CIndicators *indicators)
    return(true);
   }
 //+------------------------------------------------------------------+
+#endif
