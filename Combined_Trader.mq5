@@ -13,6 +13,8 @@ input int      StopLoss=2;       // Stop Loss
 input int      TakeProfit=10;    // Take Profit
 input int      CCI_Period = 7;       // CCI Period
 input int      CCI_Threshold = 110;  // CCI Threshold for Fractal
+input int      CCI_Sell_Confirm = 50;  // CCI level to confirm Sell
+input int      CCI_Buy_Confirm = -50; // CCI level to confirm Buy
 input int      EA_Magic=12345;   // EA Magic Number
 input double   Lot=1.0;          // Lots to Trade
 //--- weight of Neuros values
@@ -266,7 +268,7 @@ void OnTick()
        // Check for Upper Fractal
        if(mrate[i].high > mrate[i-1].high && mrate[i].high > mrate[i-2].high &&
           mrate[i].high >= mrate[i+1].high && mrate[i].high >= mrate[i+2].high &&
-          ExtCCIBuffer[i] > CCI_Threshold)
+          ExtCCIBuffer[i] < CCI_Buy_Confirm) // <-- Perubahan di sini
        {
            fractal_buy_signal = true;
            break; // Found the most recent signal, exit loop
@@ -275,7 +277,7 @@ void OnTick()
        // Check for Lower Fractal
        if(mrate[i].low < mrate[i-1].low && mrate[i].low < mrate[i-2].low &&
           mrate[i].low <= mrate[i+1].low && mrate[i].low <= mrate[i+2].low &&
-          ExtCCIBuffer[i] < -CCI_Threshold)
+          ExtCCIBuffer[i] > CCI_Sell_Confirm) // <-- Perubahan di sini
        {
            fractal_sell_signal = true;
            break; // Found the most recent signal, exit loop
